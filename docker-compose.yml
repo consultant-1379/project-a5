@@ -1,0 +1,61 @@
+version: "3.3"
+services:
+  python:
+    build: PythonScript/.
+    volumes: 
+      - csvVolume:/data
+  parser:
+    build: Parser/.
+    volumes:
+      - csvVolume:/data
+    ports:
+      - "8089:8089"
+    links:
+      - db:mysql
+    networks:
+      - dbnet
+    depends_on:
+      - python
+      - db
+  db:
+    image: mysql
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=test
+      - MYSQL_USER=sa
+      - MYSQL_PASSWORD=password
+    volumes:
+      - database:/var/lib/mysql
+    networks:
+      - dbnet
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping"]
+      interval: 10s
+      timeout: 2s
+      retries: 10
+  restservice:
+    build: RESTService
+    networks:
+      - default
+      - dbnet
+      - net1
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+  restclient:
+    build: RESTClient
+    networks:
+      - net1
+    ports:
+      - "80:8081"
+    depends_on:
+      - restservice
+volumes:
+  csvVolume:
+  database:
+
+networks:
+  net1:
+  dbnet:
